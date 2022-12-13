@@ -50,6 +50,19 @@ namespace WpfApp1
             }
         }
 
+        public void Insert(Player player)
+        {
+            var conn = ConfigurationManager.ConnectionStrings["MyConnString"].ConnectionString;
+            using (var connection = new SqlConnection(conn))
+            {
+                connection.Execute(@"
+INSERT INTO Players(Name,Score,IsStar)
+VALUES(@PName,@PScore,@PIsStar)
+", new { PName = player.Name, PScore = player.Score,PIsStar=player.IsStar
+            });
+            }
+            MessageBox.Show("New player added successfully");
+        }
 
         public void Update(Player player)
         {
@@ -67,11 +80,14 @@ new { PName = player.Name, PScore = player.Score, PIsStar = player.IsStar, PId =
         public MainWindow()
         {
             InitializeComponent();
-            var player = GetById(1);
-            player.Name = "Rafiq";
-            player.Score = 10;
+            //var player = GetById(1);
+            //player.Name = "Rafiq";
+            //player.Score = 10;
 
-            Update(player);
+            //Update(player);
+
+            Insert(new Player { IsStar=true,Name="AAA", Score=88});
+
 
             var players = GetAll();
             myDataGrid.ItemsSource = players;
