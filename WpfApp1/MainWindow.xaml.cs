@@ -58,8 +58,12 @@ namespace WpfApp1
                 connection.Execute(@"
 INSERT INTO Players(Name,Score,IsStar)
 VALUES(@PName,@PScore,@PIsStar)
-", new { PName = player.Name, PScore = player.Score,PIsStar=player.IsStar
-            });
+", new
+                {
+                    PName = player.Name,
+                    PScore = player.Score,
+                    PIsStar = player.IsStar
+                });
             }
             MessageBox.Show("New player added successfully");
         }
@@ -67,13 +71,22 @@ VALUES(@PName,@PScore,@PIsStar)
         public void Update(Player player)
         {
             var conn = ConfigurationManager.ConnectionStrings["MyConnString"].ConnectionString;
-            using (var connection=new SqlConnection(conn))
+            using (var connection = new SqlConnection(conn))
             {
                 connection.Execute(@"
 UPDATE Players
 SET Name=@PName,Score=@PScore,IsStar=@PIsStar
 WHERE Id=@Pid",
 new { PName = player.Name, PScore = player.Score, PIsStar = player.IsStar, PId = player.Id });
+            }
+        }
+
+        public void Delete(int id)
+        {
+            var conn = ConfigurationManager.ConnectionStrings["MyConnString"].ConnectionString;
+            using (var connection = new SqlConnection(conn))
+            {
+                connection.Execute("DELETE FROM Players WHERE Id=@PId", new { PId = id });
             }
         }
 
@@ -86,14 +99,71 @@ new { PName = player.Name, PScore = player.Score, PIsStar = player.IsStar, PId =
 
             //Update(player);
 
-            Insert(new Player { IsStar=true,Name="AAA", Score=88});
+            //Insert(new Player { IsStar = true, Name = "AAA", Score = 88 });
 
 
-            var players = GetAll();
-            myDataGrid.ItemsSource = players;
+            CallSP(0);
+            //var players = GetAll();
+            //myDataGrid.ItemsSource = players;
             ////var player = GetById(1);
             ////myDataGrid.ItemsSource = new List<Player> {player };
 
+        }
+
+        public void CallSP(float score)
+        {
+            var conn = ConfigurationManager.ConnectionStrings["MyConnString"].ConnectionString;
+            using (var connection = new SqlConnection(conn))
+            {
+                DynamicParameters parameters = new DynamicParameters();
+                parameters.Add("@PScore", score, DbType.Double);
+                var data = connection.Query<Player>("ShowGreaterThan", parameters, commandType: CommandType.StoredProcedure);
+                myDataGrid.ItemsSource = data;
+            }
+        }
+
+        public bool HasAlreadyDeleted { get; set; }
+        private void myDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+            var player = myDataGrid.SelectedItem as Player;
+            if (!HasAlreadyDeleted)
+            {
+                var result = MessageBox.Show($"Are you sure to delete {player?.Name}", "Info", MessageBoxButton.YesNo);
+                HasAlreadyDeleted = true;
+                if (result == MessageBoxResult.Yes)
+                {
+                    Delete(player.Id);
+                    var players = GetAll();
+                    myDataGrid.ItemsSource = players;
+                    HasAlreadyDeleted = false;
+                }
+                else
+                {
+                    Name.Text = player.Name;
+                    Score.Value = player.Score;
+                    ISStar.IsChecked = player.IsStar;
+                }
+            }
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            var player = myDataGrid.SelectedItem as Player;
+            var newPlayer = new Player
+            {
+                Id = player.Id,
+                Name = Name.Text,
+                IsStar = ISStar.IsChecked.Value,
+                Score = Score.Value,
+
+            };
+
+            Update(newPlayer);
+            HasAlreadyDeleted = false;
+
+            var players = GetAll();
+            myDataGrid.ItemsSource = players;
         }
     }
 }
